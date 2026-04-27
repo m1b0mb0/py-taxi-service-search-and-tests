@@ -23,16 +23,16 @@ class PrivateManufacturerTests(TestCase):
             password="test1234"
         )
         self.client.force_login(self.user)
-
-    def test_retrieve_manufacturer(self):
         Manufacturer.objects.create(
-            name="BAIC",
-            country="China"
+            name="Toyota",
+            country="Japan"
         )
         Manufacturer.objects.create(
             name="BMW",
             country="Germany"
         )
+
+    def test_retrieve_manufacturer(self):
         response = self.client.get(MANUFACTURER_LIST_URL)
         self.assertEqual(response.status_code, 200)
 
@@ -45,8 +45,8 @@ class PrivateManufacturerTests(TestCase):
 
     def test_manufacturer_create(self):
         form_data = {
-            "name": "BMW",
-            "country": "Germany"
+            "name": "BYD",
+            "country": "China"
         }
         self.client.post(reverse("taxi:manufacturer-create"), data=form_data)
         new_manufacturer = Manufacturer.objects.get(name=form_data["name"])
@@ -58,6 +58,21 @@ class PrivateManufacturerTests(TestCase):
         self.assertEqual(
             new_manufacturer.country,
             form_data["country"]
+        )
+
+    def test_search_manufacturer(self):
+        response = self.client.get(
+            MANUFACTURER_LIST_URL + "?name=toy"
+        )
+        manufacturers = response.context["manufacturer_list"]
+        self.assertEqual(len(manufacturers), 1)
+        self.assertEqual(manufacturers[0].name, "Toyota")
+
+    def test_no_search_results_return_all(self):
+        response = self.client.get(MANUFACTURER_LIST_URL)
+        self.assertEqual(
+            len(response.context["manufacturer_list"]),
+            2
         )
 
 
@@ -74,8 +89,6 @@ class PrivateDriverTests(TestCase):
             password="test1234"
         )
         self.client.force_login(self.user)
-
-    def test_retrieve_driver(self):
         get_user_model().objects.create_user(
             username="username1",
             password="test1234",
@@ -90,6 +103,8 @@ class PrivateDriverTests(TestCase):
             last_name="driver_last_name",
             license_number="test_licence123",
         )
+
+    def test_retrieve_driver(self):
         response = self.client.get(DRIVER_LIST_URL)
         self.assertEqual(response.status_code, 200)
 
@@ -116,6 +131,21 @@ class PrivateDriverTests(TestCase):
         self.assertEqual(new_user.last_name, form_data["last_name"])
         self.assertEqual(new_user.license_number, form_data["license_number"])
 
+    def test_search_driver(self):
+        response = self.client.get(
+            DRIVER_LIST_URL + "?username=username1"
+        )
+        drivers = response.context["driver_list"]
+        self.assertEqual(len(drivers), 1)
+        self.assertEqual(drivers[0].first_name, "test_first_name")
+
+    def test_no_search_results_return_all(self):
+        response = self.client.get(DRIVER_LIST_URL)
+        self.assertEqual(
+            len(response.context["driver_list"]),
+            3
+        )
+
 
 class PublicCarTests(TestCase):
     def test_login_required(self):
@@ -136,7 +166,6 @@ class PrivateCarTests(TestCase):
             country="Japan"
         )
 
-    def test_retrieve_car(self):
         Car.objects.create(
             model="Mitsubishi Lancer",
             manufacturer=self.manufacturer
@@ -145,6 +174,8 @@ class PrivateCarTests(TestCase):
             model="Mitsubishi Eclipse",
             manufacturer=self.manufacturer
         )
+
+    def test_retrieve_car(self):
         response = self.client.get(CAR_LIST_URL)
         self.assertEqual(response.status_code, 200)
 
@@ -164,7 +195,7 @@ class PrivateCarTests(TestCase):
             license_number="test_licence",
         )
         form_data = {
-            "model": "Mitsubishi Eclipse",
+            "model": "Subaru Forester",
             "manufacturer": self.manufacturer.id,
             "drivers": [driver.id]
         }
@@ -181,3 +212,21 @@ class PrivateCarTests(TestCase):
         )
         self.assertEqual(new_car.drivers.count(), 1)
         self.assertIn(driver, new_car.drivers.all())
+
+    def test_search_car(self):
+        response = self.client.get(
+            CAR_LIST_URL + "?model=lancer"
+        )
+        cars = response.context["car_list"]
+        self.assertEqual(len(cars), 1)
+        self.assertEqual(
+            cars[0].model,
+            "Mitsubishi Lancer"
+        )
+
+    def test_no_search_results_return_all(self):
+        response = self.client.get(CAR_LIST_URL)
+        self.assertEqual(
+            len(response.context["car_list"]),
+            2
+        )
